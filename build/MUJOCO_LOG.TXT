@@ -1,0 +1,12 @@
+Fri Oct 20 16:19:40 2023
+WARNING: mju_openResource: unknown file 'hello.xml'
+
+Fri Oct 20 18:01:35 2023
+WARNING: mju_openResource: unknown file 'models/humanoid.xml'
+
+Fri Oct 20 18:02:07 2023
+WARNING: mju_openResource: unknown file 'models/humanoid.xml'
+
+Fri Dec  1 15:40:16 2023
+WARNING: Nan, Inf or huge value in QACC at DOF 0. The simulation is unstable. Time = 0.0600.
+
