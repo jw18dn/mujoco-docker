@@ -4,8 +4,6 @@
 #include "string.h"
 #include <iostream>
 
-char error[1000];
-
 // Mujoco simulation variables
 mjModel* m;
 mjData* d;
@@ -27,20 +25,6 @@ bool button_middle = false;
 bool button_right =  false;
 double lastx = 0;
 double lasty = 0;
-
-// RUNNING SIMULATION -------------------------------------------------
-// ./run_dev.sh <- rebuilds the docker container
-// this should take you to a new "root" directory 
-// app/ buil# ls <- lists the packages available
-// F1, enter, enter : Attach to runnng container
-// In the new terminal cd build 
-// type "make"
-// run ./main
-// docker ps - shows process' running, use name to kill container
-
-
-// mujoco boot camp https://pab47.github.io/mujoco.html
-
 
 // Mouse and Keyboard Control----------------------------------------------------------------------
 // keyboard callback
@@ -152,7 +136,6 @@ void initGLFW() {
     glfwSetCursorPosCallback(window, mouse_move);
     glfwSetMouseButtonCallback(window, mouse_button);
     glfwSetScrollCallback(window, scroll);
-
 }
 
 void initVis() {
@@ -172,14 +155,14 @@ void initVis() {
     glfwSetMouseButtonCallback(window, mouse_button);
     glfwSetScrollCallback(window, scroll);
 
-    double arr_view[] = {90, -5, 5, 0.012768, -0.000000, 1.254336};
+    // camera view
+    double arr_view[] = {90, -5, 5, 0.013, 0.0, 1.25};
     cam.azimuth = arr_view[0];
     cam.elevation = arr_view[1];
     cam.distance = arr_view[2];
     cam.lookat[0] = arr_view[3];
     cam.lookat[1] = arr_view[4];
     cam.lookat[2] = arr_view[5];
-
 }
 
 void renderMuJoCo(){
@@ -210,7 +193,7 @@ void cleanup() {
 // System Control ----------------------------------------------------------------------
 void computeControlInput(const mjModel* m,  mjData* d) {
 
-    float qpos_ref[] = {0, 0, 0.43, 1.0, 0, 0, 0, 0, 0, 0, 0, 0};
+    float qpos_ref[] = {0, 5, 0.43, 1.0, 5, 0, 0, 5, 0, 0, 5, 0};
     float qvel_ref[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
@@ -231,21 +214,17 @@ int main(void)
 
     // Initialize Visualization
     initVis();
-
-    // output the positions
-    for(int i=0; i<12; i++){
-        std::cout << d->qpos[i] << '\n';}
-
+    
     // Controller
     mjcb_control = computeControlInput;
 
-    // run simulation for 10 seconds
+    // Run simulation until window closes
     while(!glfwWindowShouldClose(window)){
         // Simulation Step
         mjtNum simstart = d->time;
-        while(d->time - simstart < 1.0/60.0)
+        while(d->time - simstart < 1.0/60.0){
             mj_step(m, d);
-
+        }
 
         // Render the Model
         renderMuJoCo();     

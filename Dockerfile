@@ -16,8 +16,8 @@ RUN cd mujoco && mkdir build
 RUN cd mujoco/build && cmake ..
 RUN cd mujoco/build && cmake --build . --target install
 
-ADD https://api.github.com/repos/JTylerBoylan/orlqp/git/refs/heads/main version.json
-RUN git clone https://github.com/JTylerBoylan/orlqp
-RUN cd orlqp && mkdir build
-RUN cd orlqp/build && cmake ..
-RUN cd orlqp/build && cmake --build . --target install
+# ADD https://api.github.com/repos/JTylerBoylan/orlqp/git/refs/heads/main version.json
+# RUN git clone https://github.com/JTylerBoylan/orlqp
+# RUN cd orlqp && mkdir build
+# RUN cd orlqp/build && cmake ..
+# RUN cd orlqp/build && cmake --build . --target install

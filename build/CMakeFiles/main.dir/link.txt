@@ -1,1 +1,1 @@
-/usr/bin/c++ CMakeFiles/main.dir/src/main.cpp.o -o main  -Wl,-rpath,/usr/local/lib -lstdc++ -lstdc++fs -lm /usr/local/lib/libmujoco.so.3.0.1 /usr/local/lib/liborlqp.so /usr/lib/x86_64-linux-gnu/libglfw.so.3.3 /usr/local/lib/libosqp.so 
+/usr/bin/c++ CMakeFiles/main.dir/src/main.cpp.o -o main  -Wl,-rpath,/usr/local/lib -lstdc++ -lstdc++fs -lm /usr/local/lib/libosqp.so /usr/local/lib/libmujoco.so.3.0.2 /usr/lib/x86_64-linux-gnu/libglfw.so.3.3 
