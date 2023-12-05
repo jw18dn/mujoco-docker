@@ -21,6 +21,13 @@ mjvOption opt;                      // visualization options
 mjvScene scn;                       // abstract scene
 mjrContext con;                     // custom GPU context
 
+// Mouse Interaction
+bool button_left = false;
+bool button_middle = false;
+bool button_right =  false;
+double lastx = 0;
+double lasty = 0;
+
 // RUNNING SIMULATION -------------------------------------------------
 // ./run_dev.sh <- rebuilds the docker container
 // this should take you to a new "root" directory 
@@ -31,30 +38,81 @@ mjrContext con;                     // custom GPU context
 // run ./main
 // docker ps - shows process' running, use name to kill container
 
-// simulate ../model/humanoid/humanoid.xml
-
-// FROM MUJOCO MODEL-----------------------------------------------------
-//   <actuator>
-//     <position class="abduction" name="FR_hip" joint="FR_hip_joint"/>
-//     <position class="hip" name="FR_thigh" joint="FR_thigh_joint"/>
-//     <position class="knee" name="FR_calf" joint="FR_calf_joint"/>
-//     <position class="abduction" name="FL_hip" joint="FL_hip_joint"/>
-//     <position class="hip" name="FL_thigh" joint="FL_thigh_joint"/>
-//     <position class="knee" name="FL_calf" joint="FL_calf_joint"/>
-//     <position class="abduction" name="RR_hip" joint="RR_hip_joint"/>
-//     <position class="hip" name="RR_thigh" joint="RR_thigh_joint"/>
-//     <position class="knee" name="RR_calf" joint="RR_calf_joint"/>
-//     <position class="abduction" name="RL_hip" joint="RL_hip_joint"/>
-//     <position class="hip" name="RL_thigh" joint="RL_thigh_joint"/>
-//     <position class="knee" name="RL_calf" joint="RL_calf_joint"/>
-//   </actuator>
 
 // mujoco boot camp https://pab47.github.io/mujoco.html
 
+
+// Mouse and Keyboard Control----------------------------------------------------------------------
+// keyboard callback
+void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
+{
+    // backspace: reset simulation
+    if( act==GLFW_PRESS && key==GLFW_KEY_BACKSPACE )
+    {
+        mj_resetData(m, d);
+        mj_forward(m, d);
+    }
+}
+
+// mouse button callback
+void mouse_button(GLFWwindow* window, int button, int act, int mods)
+{
+    // update button state
+    button_left =   (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS);
+    button_middle = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE)==GLFW_PRESS);
+    button_right =  (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS);
+
+    // update mouse position
+    glfwGetCursorPos(window, &lastx, &lasty);
+}
+
+// mouse move callback
+void mouse_move(GLFWwindow* window, double xpos, double ypos)
+{
+    // no buttons down: nothing to do
+    if( !button_left && !button_middle && !button_right )
+        return;
+
+    // compute mouse displacement, save
+    double dx = xpos - lastx;
+    double dy = ypos - lasty;
+    lastx = xpos;
+    lasty = ypos;
+
+    // get current window size
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    // get shift key state
+    bool mod_shift = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS ||
+                      glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)==GLFW_PRESS);
+
+    // determine action based on mouse button
+    mjtMouse action;
+    if( button_right )
+        action = mod_shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
+    else if( button_left )
+        action = mod_shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
+    else
+        action = mjMOUSE_ZOOM;
+
+    // move camera
+    mjv_moveCamera(m, action, dx/height, dy/height, &scn, &cam);
+}
+
+// Mouse Scroll Callback
+void scroll(GLFWwindow* window, double xoffset, double yoffset)
+{
+    // emulate vertical mouse motion = 5% of window height
+    mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scn, &cam);
+}
+
+
+// Simulation Initialization----------------------------------------------------------------------
 // Function to initialize MuJoCo simulation
 void initMuJoCo() {
     // Load the model from XML file (replace "your_model.xml" with your MuJoCo model file)
-    m = mj_loadXML("/app/models/agility_cassie/scene.xml", NULL, NULL, 0);
+    m = mj_loadXML("/app/models/unitree_a1/scene.xml", NULL, NULL, 0);
 
     if (!m) {
         std::cerr << "Error loading MuJoCo model." << std::endl;
@@ -77,7 +135,7 @@ void initGLFW() {
     }
 
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(800, 600, "MuJoCo Visualization", NULL, NULL);
+    window = glfwCreateWindow(1244, 700, "MuJoCo Visualization", NULL, NULL);
 
     if (!window) {
         std::cerr << "Error creating GLFW window." << std::endl;
@@ -87,6 +145,14 @@ void initGLFW() {
 
     // Make the window's context current
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    // install GLFW mouse and keyboard callbacks
+    glfwSetKeyCallback(window, keyboard);
+    glfwSetCursorPosCallback(window, mouse_move);
+    glfwSetMouseButtonCallback(window, mouse_button);
+    glfwSetScrollCallback(window, scroll);
+
 }
 
 void initVis() {
@@ -100,17 +166,32 @@ void initVis() {
     mjv_makeScene(m, &scn, 1000);                  // space for 1000 objects
     mjr_makeContext(m, &con, mjFONTSCALE_100);     // model-specific context
 
-    // get framebuffer viewport
-    glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
+    // install GLFW mouse and keyboard callbacks
+    glfwSetKeyCallback(window, keyboard);
+    glfwSetCursorPosCallback(window, mouse_move);
+    glfwSetMouseButtonCallback(window, mouse_button);
+    glfwSetScrollCallback(window, scroll);
+
+    double arr_view[] = {90, -5, 5, 0.012768, -0.000000, 1.254336};
+    cam.azimuth = arr_view[0];
+    cam.elevation = arr_view[1];
+    cam.distance = arr_view[2];
+    cam.lookat[0] = arr_view[3];
+    cam.lookat[1] = arr_view[4];
+    cam.lookat[2] = arr_view[5];
+
 }
 
 void renderMuJoCo(){
     // update scene and render
+    viewport = {0, 0, 0, 0};
+    glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
     mjv_updateScene(m, d, &opt, &pert, &cam, mjCAT_ALL, &scn);
     mjr_render(viewport, &scn, &con);
 
     // swap OpenGL buffers (blocking call due to v-sync)
     glfwSwapBuffers(window);
+    glfwPollEvents();
 }
 
 // Function to clean up resources
@@ -125,16 +206,20 @@ void cleanup() {
     mjr_freeContext(&con);
 }
 
-// void computeControlInput(const mjModel* m, const mjData* d, double& u) {
-//     // Example: Apply PD control on a joint position
-//     int jointID = mj_name2id(m, mjOBJ_JOINT, "your_joint_name");
-//     double desiredPosition = 0.0; // Replace with your desired position
 
-//     double positionError = desiredPosition - d->qpos[jointID];
-//     double velocityError = 0.0 - d->qvel[jointID];
+// System Control ----------------------------------------------------------------------
+void computeControlInput(const mjModel* m,  mjData* d) {
 
-//     u = 1.0 * positionError + 0.1 * velocityError;
-// }
+    float qpos_ref[] = {0, 0, 0.43, 1.0, 0, 0, 0, 0, 0, 0, 0, 0};
+    float qvel_ref[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+
+    for(int i=0; i<12; i++){
+        d->ctrl[i] = 0.1*(qpos_ref[i] - d->qpos[i]) + 0.02*(qvel_ref[i] - d->qvel[i]);
+    }
+}
+
+
 
 int main(void)
 {
@@ -147,25 +232,23 @@ int main(void)
     // Initialize Visualization
     initVis();
 
+    // output the positions
+    for(int i=0; i<12; i++){
+        std::cout << d->qpos[i] << '\n';}
+
+    // Controller
+    mjcb_control = computeControlInput;
+
     // run simulation for 10 seconds
     while(!glfwWindowShouldClose(window)){
         // Simulation Step
-        mj_step(m, d);
+        mjtNum simstart = d->time;
+        while(d->time - simstart < 1.0/60.0)
+            mj_step(m, d);
 
-        // Feedback control
-        // double controlInput;
-        // computeControlInput(m, d, controlInput);
-
-        // Apply control input to the system (replace with your system-specific control logic)
-        // For example, set joint torque in MuJoCo
-        // int jointID = mj_name2id(m, mjOBJ_JOINT, "your_joint_name");
-        // m->ctrl[jointID] = controlInput;
 
         // Render the Model
-        renderMuJoCo();
-
-        // Poll for and process events
-        glfwPollEvents();        
+        renderMuJoCo();     
     }
 
     // Cleanup Resources
